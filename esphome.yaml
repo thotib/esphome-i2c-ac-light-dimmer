@@ -1,0 +1,83 @@
+substitutions:
+  devicename: four_channel_dimmer
+  upper_devicename: "Four channel dimmer"
+
+esphome:
+  name: "${devicename}"
+  platform: ESP8266
+  board: d1
+  includes:
+    - ./four_channel_dimmer/src/KridaI2CDimOut.h
+
+wifi:
+  ssid: "WIFI_SSID"
+  password: "WIFI_PASSWORD"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${upper_devicename} Fallback Hotspot"
+
+captive_portal:
+
+# Enable logging
+logger:
+  
+# Enable Home Assistant API
+api:
+
+ota:
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal ${upper_devicename}"
+    update_interval: 60s
+    
+i2c:
+# I2C setup
+  sda: GPIO4
+  scl: GPIO5
+  scan: True
+  frequency: 100kHz
+  id: bus_a
+
+# Custom I2C output (KridaI2CDimOut.h)  
+output:
+  - platform: custom
+    type: float
+    lambda: |-
+      std::vector<FloatOutput *> output;
+      for(int i = 0x80; i < 0x84; i++) {
+          auto out_channel = new KridaI2CDimOut(i);
+          App.register_component(out_channel);
+          output.push_back(out_channel);
+      }
+      return output;
+
+    outputs:
+      - id: channel_0x80
+      - id: channel_0x81
+      - id: channel_0x82
+      - id: channel_0x83
+
+light:
+# KRIDA 4ch AC dimmer outputs
+# The entities will be here in Home Assistant -> Configuration -> Integrations -> ESPHome -> four_channel_dimmer
+  - platform: monochromatic
+    id: channel_1
+    name: "Channel 1"
+    output: channel_0x80
+
+  - platform: monochromatic
+    id: channel_2
+    name: "Channel 2"
+    output: channel_0x81
+
+  - platform: monochromatic
+    id: channel_3
+    name: "Channel 3"
+    output: channel_0x82
+
+  - platform: monochromatic
+    id: channel_4 100ms
+    name: "Channel 4"
+    output: channel_0x83
